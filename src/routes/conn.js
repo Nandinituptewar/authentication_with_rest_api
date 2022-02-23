@@ -1,13 +1,17 @@
+const jwt = require("jsonwebtoken");
+const { sign } = require("jsonwebtoken");
+
 const express = require("express");
 const app = express();
 const mysql = require('mysql2');
 const connection= require('./db');
-var router = express.Router();
+const router = express.Router();
+const { checkToken } = require("../auth/token_validation");
 
 router.use(express.json());
 
 //Display the records
-router.get("/",(req,res) => {
+router.get("/",checkToken,(req,res) => {
     connection.query('SELECT * from employeetable', (err, rows) => {
         if(err) throw err;
         res.send(rows);
@@ -23,7 +27,7 @@ router.post('/adding_data', function (req, res) {
        res.send(JSON.stringify(results));
        connection.end();
      });
- });
+ });    
 
 //delete records
  router.delete('/deleting_data/:id', function (req, res) {
@@ -40,6 +44,31 @@ router.post('/adding_data', function (req, res) {
        if (error) throw error;
        res.send(JSON.stringify(results));
        connection.end();
+     });
+ });
+
+ //login
+ router.post('/login_data', function (req, res) {
+    var postData  = req.body;
+    console.log('1');
+    connection.query('select * from userstable WHERE UserID= ?', [req.body.UserID] , function (error, results, fields) {
+       if (error) {
+           res.send(req.body.EmpID);
+       }
+       else{
+           if(req.body.UserName==results[0]["UserName"]){
+            results[0]["UserID"]= undefined; 
+            const jsontoken= sign({result:results[0]},"abz134", {expiresIn: "1h"} ) ;
+            return res.json({
+                success: 1,
+                message: "login successfully",
+                token: jsontoken
+              });
+           }
+           else{
+               res.send('Invalid User Id or Name');
+            }
+       }
      });
  });
 
